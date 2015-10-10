@@ -4,7 +4,7 @@ using UnityEngine;
 public class MapCreationWindow : EditorWindow
 {	
 	private int rooms=1;
-	MapGeneration mapScript;
+	MapGenerator mapScript;
 
 	// Add menu item named "My Window" to the Window menu
 	[MenuItem("Window/MapCreation")]
@@ -17,7 +17,7 @@ public class MapCreationWindow : EditorWindow
 	void OnGUI()
 	{	
 		GameObject go = GameObject.FindGameObjectWithTag ("generator");
-		mapScript = go.GetComponent<MapGeneration> ();
+		mapScript = go.GetComponent<MapGenerator> ();
 
 		GUILayout.Label ("Map Variables", EditorStyles.boldLabel);
 		rooms = EditorGUILayout.IntField ("number of rooms", rooms);
