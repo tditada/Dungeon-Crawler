@@ -23,7 +23,7 @@ public class MapCreationWindow : EditorWindow
 		rooms = EditorGUILayout.IntField ("number of rooms", rooms);
 
 		if (GUILayout.Button ("Create new map!")) {
-			mapScript.newMap(rooms);
+			//mapScript.newMap(rooms);
 		}
 
 
