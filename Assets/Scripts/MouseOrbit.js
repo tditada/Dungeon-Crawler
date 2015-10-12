@@ -1,6 +1,5 @@
 var target : Transform;
 var distance = 10.0;
-
 var xSpeed = 250.0;
 var ySpeed = 120.0;
 
@@ -30,10 +29,22 @@ function LateUpdate () {
  		y = ClampAngle(y, yMinLimit, yMaxLimit);
  		       
         var rotation = Quaternion.Euler(y, x, 0);
-        var position = rotation * Vector3(0.0, 0.0, -distance) + target.position;
+               
+       	var dist = distance + 1.0f;
+       	var hit: RaycastHit;
+       	var ray = new Ray(target.position, transform.position - target.position);
+			
+		var layerMask = 1 << 8;
+		layerMask = ~layerMask;    	    
+	    if(Physics.Raycast(ray, hit, dist, layerMask)){
+	        dist = hit.distance-1.0f;
+	    }
+        if(dist>distance)dist=distance;
+        if(dist<0.0f)dist=0.0f;
+        
         
         transform.rotation = rotation;
-        transform.position = position;
+        transform.position = rotation * Vector3(0.0, 0.0, -dist) + target.position;
     }
 }
 
