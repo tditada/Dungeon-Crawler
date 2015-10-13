@@ -15,6 +15,8 @@ public class Chunk : MonoBehaviour {
 	public Orientation chunkOrientation = Orientation.NORTH;
 
 	public List<Vector3> mountingPoints = new List<Vector3>();
+
+	public List<Vector3> deathTraps = new List<Vector3>(); 
 		
 	public bool isStartChunk = false;
 
@@ -46,5 +48,10 @@ public class Chunk : MonoBehaviour {
 			}
 			isEndChunk = value;
 		}
+	}
+
+	public List<Vector3> returnPossibleTraps(){
+		Debug.Log (deathTraps.Capacity);
+		return deathTraps;
 	}
 }
