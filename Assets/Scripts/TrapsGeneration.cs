@@ -21,8 +21,9 @@ public class TrapsGeneration : MonoBehaviour {
 			if(Random.value < probability_room){
 				Debug.Log (value);
 				List<Vector3> possibleTraps = value.returnPossibleTraps();
+				// revisar la linea 25 que da error al correr
 				Vector3 trapPosition = possibleTraps[Random.Range(0,possibleTraps.Count)] + new Vector3(kvp.Key.X, kvp.Key.Y); 
-				GameObject p = traps[Random.Range(0,traps.Count)];
+				GameObject p = traps[Random.Range(0,traps.Count-1)];
 				Instantiate(p,trapPosition,p.transform.rotation);
 			}
 		}
