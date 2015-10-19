@@ -45,7 +45,7 @@ public class MapGenerator : MonoBehaviour {
 		endPoint = GetEndPoint(startPoint, minSteps, maxSteps, maxSize);
 
 		if (endPoint == null) {
-			return;
+			return null;
 		}
 
 		map.Add(startPoint, Instantiate(chamberPrefab) as Chunk);
