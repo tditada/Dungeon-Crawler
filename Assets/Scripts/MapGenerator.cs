@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 public class MapGenerator : MonoBehaviour {
 
@@ -34,19 +35,26 @@ public class MapGenerator : MonoBehaviour {
 	private System.Random random;
 
 	public Dictionary<Point, Chunk> NewMap(int maxSize, int minSteps, int maxSteps, int seed) {
-		if (minSteps < maxSteps) { throw new ArgumentException(); }
+		if (minSteps > maxSteps) { throw new ArgumentException(); }
 		if (minSteps > maxSize) { throw new ArgumentException(); }
 		if (maxSteps > maxSize) { throw new ArgumentException(); }
 		if (ramificationProbability < 0.0 || ramificationProbability > 1.0) { throw new ArgumentException(); }
 		if (chamberProbability < 0.0 || ramificationProbability > 1.0) { throw new ArgumentException(); }
+				
+		Debug.Log("Generating New Map");
 
 		map = new Dictionary<Point, Chunk>();
+		random = new System.Random(seed);
+
 		startPoint = new Point(random.Next(0, maxSize), random.Next(0, maxSize));
+
+		Debug.LogFormat("Starting Point: " + startPoint);
+
 		endPoint = GetEndPoint(startPoint, minSteps, maxSteps, maxSize);
 
-		if (endPoint == null) {
-			return null;
-		}
+		Debug.LogFormat("Ending Point: " + endPoint);
+
+		if (endPoint == null) { return null; }
 
 		map.Add(startPoint, Instantiate(chamberPrefab) as Chunk);
 		map.Add(endPoint, Instantiate(chamberPrefab) as Chunk);
@@ -60,13 +68,15 @@ public class MapGenerator : MonoBehaviour {
 	}
 
 	Point GetEndPoint (Point startPoint, int minSteps, int maxSteps, int maxSize) {
-		var endPoint = new Point(0, 0);
+		Point endPoint = null;
 		var maxTryes = maxSteps * maxSteps;
+		var distance = 0;
 
-		while (maxTryes > 0 && startPoint.Distance(endPoint) < minSteps && startPoint.Distance(endPoint) >= maxSteps) {
+		do {
 			endPoint = new Point(random.Next(0, maxSize), random.Next(0, maxSize));
 			maxTryes--;
-		}
+			distance = startPoint.Distance(endPoint);
+		} while (maxTryes > 0 && (distance < minSteps || distance >= maxSteps));
 
 		if (maxTryes == 0) {
 			return null;
@@ -80,6 +90,11 @@ public class MapGenerator : MonoBehaviour {
 		var rightmostPoint = startingPoint.X > endingPoint.X ? startingPoint : endingPoint;
 		var topmostPoint = startingPoint.Y < endingPoint.Y ? startingPoint : endingPoint;
 		var bottomostPoint = startingPoint.Y > endingPoint.Y ? startingPoint : endingPoint;
+		Debug.Log ("Generating Trivial Path");
+		Debug.Log ("Leftmost: " + leftmostPoint);
+		Debug.Log ("Rightmost: " + rightmostPoint);
+		Debug.Log ("Topmost: " + topmostPoint);
+		Debug.Log ("Bottomost: " + bottomostPoint);
 
 		map[leftmostPoint].Rotate(Orientation.EAST);
 		if (rightmostPoint.Equals(topmostPoint)) {
@@ -94,169 +109,198 @@ public class MapGenerator : MonoBehaviour {
 	}
 
 	void GenerateHorizontalPath (Point leftmostPoint, Point rightmostPoint) {
+		Debug.Log ("Generating Horizontal Path");
+		var previousPoint = new Point(leftmostPoint.X, leftmostPoint.Y);
 		for (int i = leftmostPoint.X + 1; i < rightmostPoint.X; i++) {
-			var chunk = Instantiate(twoWayCorridorPrefab) as Chunk;
-			chunk.Rotate(Orientation.EAST);
-			map.Add(new Point(i, leftmostPoint.Y), chunk);
+			var currentPoint = new Point(i , leftmostPoint.Y);
+			var nextPoint = new Point(i + 1, leftmostPoint.Y);
+			map.Add(currentPoint, PutTwoWayChunk(currentPoint, previousPoint, nextPoint, chamberProbability));
 		}
 	}
 
 	void GenerateVerticalPath (Point topmostPoint, Point bottomostPoint, Point rightmostPoint) {
+		Debug.Log ("Generating Vertical Path");
+		var previousPoint = new Point(rightmostPoint.X, topmostPoint.Y);
 		for (int j = topmostPoint.Y + 1; j < bottomostPoint.Y; j++) {
-			var chunk = Instantiate(twoWayCorridorPrefab);
-			chunk.Rotate(Orientation.NORTH);
-			map.Add(new Point(rightmostPoint.X, j), chunk);
+			var currentPoint = new Point(rightmostPoint.X, j);
+			var nextPoint = new Point(rightmostPoint.X, j + 1);
+			map.Add(currentPoint, PutTwoWayChunk(currentPoint, previousPoint, nextPoint, chamberProbability));
+			previousPoint = currentPoint;
 		}
 	}
 
 	void GenerateCorner (Point leftmostPoint, Point rightmostPoint) {
 		var cornerPoint = new Point(rightmostPoint.X, leftmostPoint.Y);
 		if (!map.ContainsKey(cornerPoint)) {
-			var chunk = Instantiate(cornerPrefab) as Chunk;
-			if (rightmostPoint.Y > leftmostPoint.Y) {
-				chunk.Rotate(Orientation.WEST);
-			} else {
-				chunk.Rotate(Orientation.SOUTH);
-			}
+			Debug.Log ("Putting Corner");
+			var chunk = PutTwoWayChunk(cornerPoint, rightmostPoint, leftmostPoint, chamberProbability);
 			map.Add(cornerPoint, chunk);
 		}
 	}
 
 	void Ramify (double ramificationProbability, double chamberProbability, int maxSize) {
-		foreach (var chunk in map) {
-			RamifyChunk(null, chunk.Key, ramificationProbability, chamberProbability, maxSize);
+		Debug.Log ("Starting Ramification");
+		foreach (var point in map.Keys.ToList()) {
+			RamifyChunk(null, point, ramificationProbability, chamberProbability, maxSize);
 		}
 	}
 
-	bool RamifyChunk (Point previousPosition, Point currentPosition, double ramificationProbability, double chamberProbability, int maxSize) {
-		if (!map.ContainsKey(currentPosition) && random.NextDouble() < ramificationProbability) {
-			var ramificationPoints = GetRamificationPoints(currentPosition, maxSize);
-			for (int i = 0; i < ramificationPoints.Count; i++) {
-				map.Add(ramificationPoints[i], null);
-				if (!RamifyChunk(currentPosition, ramificationPoints[i], ramificationProbability, chamberProbability, maxSize)) {
-					ramificationPoints.Remove(ramificationPoints[i]);
-					i--;
-				}
+	void RamifyChunk (Point previousPosition, Point currentPosition, double ramificationProbability, double chamberProbability, int maxSize) {
+		var r = random.NextDouble();
+		Debug.Log ("Current Point: " + currentPosition + " r = " + r);
+		var ramificationPoints = new List<Point>();
+		if (r < ramificationProbability) {
+			Debug.Log ("Ramifying position: " + currentPosition);
+			ramificationPoints.AddRange(GetRamificationPoints(currentPosition, maxSize));
+			Debug.Log ("Total points to ramify = " + ramificationPoints.Count);
+			foreach (var ramificationPoint in ramificationPoints) {
+				map.Add (ramificationPoint, null);
 			}
-			DecideChunk(previousPosition, currentPosition, chamberProbability, ramificationPoints);
-			return true;
+			foreach (var ramificationPoint in ramificationPoints) {
+				RamifyChunk(currentPosition, ramificationPoint, ramificationProbability, chamberProbability, maxSize);
+			}
 		}
-		return false;
+		DecideChunk(previousPosition, currentPosition, chamberProbability, ramificationPoints);
 	}
 
-	void DecideChunk (Point previousPosition, Point currentPosition, double chamberProbability, List<Point> ramificationPoints) {
-		var chunk = map[currentPosition];
+	void DecideChunk (Point parentPoint, Point currentPoint, double chamberProbability, List<Point> ramificationPoints) {
+		Debug.Log("Deciding Chunk at " + currentPoint);
+		var chunk = map[currentPoint];
 		switch (ramificationPoints.Count) {
 		case 0:
 			if (chunk == null) {
-				chunk = PutChamber(previousPosition, currentPosition);
+				chunk = PutChamber(currentPoint, parentPoint);
 			}
 			break;
 		case 1:
 			if (chunk == null) {
-				chunk = PutTwoWayChunk(currentPosition, previousPosition, ramificationPoints[0], chamberProbability);
+				chunk = PutTwoWayChunk(currentPoint, parentPoint, ramificationPoints[0], chamberProbability);
 			} else {
-				Destroy(chunk);
-				chunk = PutThreeWayChunk(currentPosition, previousPosition, ramificationPoints[0], ramificationPoints[1], chamberProbability);
+				Point previoustPoint = null, nextPoint = null;
+				switch (chunk.chunkOrientation) {
+				case Orientation.NORTH:
+					previoustPoint = new Point(currentPoint.X, currentPoint.Y + 1);
+					nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
+					break;
+				case Orientation.EAST:
+					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+					nextPoint = new Point(currentPoint.X + 1 , currentPoint.Y);
+					break;
+				case Orientation.SOUTH:
+					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+					nextPoint = new Point(currentPoint.X, currentPoint.Y + 1);
+					break;
+				case Orientation.WEST:
+					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+					nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
+					break;
+				}
+				DestroyImmediate(chunk);
+				chunk = PutThreeWayChunk(currentPoint, previoustPoint, ramificationPoints[0], nextPoint, chamberProbability);
 			}
 			break;
 		case 2:
 			if (chunk == null) {
-				chunk = PutThreeWayChunk(currentPosition, previousPosition, ramificationPoints[0], ramificationPoints[1], chamberProbability);
+				chunk = PutThreeWayChunk(currentPoint, parentPoint, ramificationPoints[0], ramificationPoints[1], chamberProbability);
 			} else {
-				Destroy(chunk);
+				DestroyImmediate(chunk);
 				chunk = PutFourWayChunk(chamberProbability);
 			}
 			break;
 		case 3:
 			if (chunk != null) {
-				Destroy(chunk);
+				DestroyImmediate(chunk);
 			}
 			chunk = PutFourWayChunk(chamberProbability);
 			break;
 		}
-		map[currentPosition] = chunk;
+		map[currentPoint] = chunk;
 	}
 
-	Chunk PutChamber (Point previousPosition, Point currentPosition) {
+	Chunk PutChamber (Point currentPoint, Point parentPoint) {
 		var chunk = Instantiate(chamberPrefab) as Chunk;
-		chunk.Rotate(previousPosition.RelativeOrientationTo(currentPosition));
+		chunk.Rotate(parentPoint.RelativeOrientationTo(currentPoint));
+		Debug.Log ("Putting Chamber at " + currentPoint + " with orientation towards " + chunk.chunkOrientation);
 		return chunk;
 	}
 
-	Chunk PutTwoWayChunk (Point currentPosition, Point previousPosition, Point other, double chamberProbability) {
+	Chunk PutTwoWayChunk (Point currentPoint, Point parentPoint, Point otherPoint, double chamberProbability) {
 		Chunk chunk = null;
-		if ((((int)previousPosition.RelativeOrientationTo(currentPosition) -
-		      (int)other.RelativeOrientationTo(currentPosition)) % 2) == 0) {
-			chunk = PutSraightTwoWayChunk(currentPosition, previousPosition, other, chamberProbability);
+		if ((((int)parentPoint.RelativeOrientationTo(currentPoint) -
+		      (int)otherPoint.RelativeOrientationTo(currentPoint)) % 2) == 0) {
+			chunk = PutSraightTwoWayChunk(currentPoint, parentPoint, otherPoint, chamberProbability);
 		} else {
-			chunk = PutCornerTwoWayChunk(currentPosition, previousPosition, other, chamberProbability);
+			chunk = PutCornerTwoWayChunk(currentPoint, parentPoint, otherPoint, chamberProbability);
 	    }
 		return chunk;
 	}
 
-	Chunk PutSraightTwoWayChunk (Point currentPosition, Point previousPosition, Point other, double chamberProbability) {
+	Chunk PutSraightTwoWayChunk (Point currentPoint, Point parentPoint, Point otherPoint, double chamberProbability) {
 		Chunk chunk = InstantiateChunk(twoWayCorridorPrefab, twoWayChamberPrefab, chamberProbability); 
-		if (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.SOUTH ||
-		    previousPosition.RelativeOrientationTo(currentPosition) == Orientation.NORTH) {
+		if (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH ||
+		    parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH) {
 			chunk.Rotate(Orientation.NORTH);						
 		} else {
 			chunk.Rotate(Orientation.EAST);
 		}
+		Debug.Log ("Putting TwoWayChunk at " + currentPoint + " with orientation towards " + chunk.chunkOrientation);
 		return chunk;
 	}
 
-	Chunk PutCornerTwoWayChunk (Point currentPosition, Point previousPosition, Point other, double chamberProbability) {
+	Chunk PutCornerTwoWayChunk (Point currentPoint, Point parentPoint, Point otherPoint, double chamberProbability) {
 		Chunk chunk = InstantiateChunk(cornerPrefab, cornerChamberPrefab, chamberProbability);
-		if ((previousPosition.RelativeOrientationTo(currentPosition) == Orientation.NORTH &&
-		     other.RelativeOrientationTo(currentPosition) == Orientation.EAST) ||
-		    (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.EAST &&
-		 other.RelativeOrientationTo(currentPosition) == Orientation.NORTH)) {
+		if ((parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH &&
+		     otherPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST) ||
+		    (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST &&
+		 otherPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH)) {
 			chunk.Rotate(Orientation.NORTH);
-		} else if ((previousPosition.RelativeOrientationTo(currentPosition) == Orientation.EAST &&
-		            other.RelativeOrientationTo(currentPosition) == Orientation.SOUTH) ||
-		           (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.SOUTH &&
-		 other.RelativeOrientationTo(currentPosition) == Orientation.EAST)) {
+		} else if ((parentPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST &&
+		            otherPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH) ||
+		           (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH &&
+		 otherPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST)) {
 			chunk.Rotate(Orientation.EAST);
-		} else if ((previousPosition.RelativeOrientationTo(currentPosition) == Orientation.SOUTH &&
-		            other.RelativeOrientationTo(currentPosition) == Orientation.WEST) ||
-		           (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.WEST &&
-		 other.RelativeOrientationTo(currentPosition) == Orientation.SOUTH)) {
+		} else if ((parentPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH &&
+		            otherPoint.RelativeOrientationTo(currentPoint) == Orientation.WEST) ||
+		           (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.WEST &&
+		 otherPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH)) {
 			chunk.Rotate(Orientation.SOUTH);
-		} else if ((previousPosition.RelativeOrientationTo(currentPosition) == Orientation.WEST &&
-		            other.RelativeOrientationTo(currentPosition) == Orientation.NORTH) ||
-		           (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.NORTH &&
-		 other.RelativeOrientationTo(currentPosition) == Orientation.WEST)) {
+		} else if ((parentPoint.RelativeOrientationTo(currentPoint) == Orientation.WEST &&
+		            otherPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH) ||
+		           (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH &&
+		 otherPoint.RelativeOrientationTo(currentPoint) == Orientation.WEST)) {
 			chunk.Rotate(Orientation.WEST);
 		}
+		Debug.Log ("Putting CornerChunk at " + currentPoint + " with orientation towards " + chunk.chunkOrientation);
 		return chunk;
 	}
 
-	Chunk PutThreeWayChunk (Point currentPosition, Point previousPosition, Point other1, Point other2, double chamberProbability) {
+	Chunk PutThreeWayChunk (Point currentPoint, Point parentPoint, Point otherPoint1, Point otherPoint2, double chamberProbability) {
 		Chunk chunk = InstantiateChunk(threeWayCorridorPrefab, threeWayChamberPrefab, chamberProbability);
-		var orientationSum = (int)previousPosition.RelativeOrientationTo(currentPosition) +
-			(int)other1.RelativeOrientationTo(currentPosition) + (int)other2.RelativeOrientationTo(currentPosition);
+		var orientationSum = (int)parentPoint.RelativeOrientationTo(currentPoint) +
+			(int)otherPoint1.RelativeOrientationTo(currentPoint) + (int)otherPoint2.RelativeOrientationTo(currentPoint);
 		if (orientationSum % 2 == 0) {
-			if (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.EAST ||
-			    other1.RelativeOrientationTo(currentPosition) == Orientation.EAST ||
-			    other2.RelativeOrientationTo(currentPosition) == Orientation.EAST) {
-				chunk.Rotate(Orientation.EAST);
-			} else {
-				chunk.Rotate(Orientation.WEST);
-			}
-		} else {
-			if (previousPosition.RelativeOrientationTo(currentPosition) == Orientation.NORTH ||
-			    other1.RelativeOrientationTo(currentPosition) == Orientation.NORTH ||
-			    other2.RelativeOrientationTo(currentPosition) == Orientation.NORTH) {
+			if (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH ||
+			    otherPoint1.RelativeOrientationTo(currentPoint) == Orientation.NORTH ||
+			    otherPoint2.RelativeOrientationTo(currentPoint) == Orientation.NORTH) {
 				chunk.Rotate(Orientation.NORTH);
 			} else {
 				chunk.Rotate(Orientation.SOUTH);
 			}
+		} else {
+			if (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST ||
+			    otherPoint1.RelativeOrientationTo(currentPoint) == Orientation.EAST ||
+			    otherPoint2.RelativeOrientationTo(currentPoint) == Orientation.EAST) {
+				chunk.Rotate(Orientation.EAST);
+			} else {
+				chunk.Rotate(Orientation.WEST);
+			}
 		}
+		Debug.Log ("Putting ThreeWayChunk at " + currentPoint + " with orientation towards " + chunk.chunkOrientation);
 		return chunk;
 	}
 
 	Chunk PutFourWayChunk(double chamberProbability) {
+		Debug.Log ("Putting FourWayChunk");
 		return InstantiateChunk(fourWayCorridorPrefab, fourWayChamberPrefab, chamberProbability);
 	}
 
@@ -268,13 +312,31 @@ public class MapGenerator : MonoBehaviour {
 		}
 	}
 
+	Point GetNextPositionOnTrivialPath (Point parentPoint, Point currentPoint) {
+		if (parentPoint.X == currentPoint.X) {
+			if (parentPoint.Y < currentPoint.Y) {
+				return new Point(currentPoint.X, currentPoint.Y + 1);
+			} else {
+				return new Point(currentPoint.X, currentPoint.Y - 1);
+			}
+		} else {
+			if (parentPoint.X < currentPoint.X) {
+				return new Point(currentPoint.X + 1, currentPoint.Y);
+			} else {
+				return new Point(currentPoint.X - 1, currentPoint.Y);
+			}
+		}
+	}
+
 	List<Point> GetRamificationPoints (Point center, int maxSize) {
 		var ramificationPoints = new List<Point>();
 		var xs = new int[] {1, 0, -1, 0};
 		var ys = new int[] {0, 1, 0, -1};
+		Debug.Log ("Checking Ramification Points for center: " + center);
 		for (int i = 0; i < xs.Length; i++) {
 			var point = new Point(center.X + xs[i], center.Y + ys[i]);
 			if (UsablePoint(point, maxSize)) {
+				Debug.Log ("Point " + point + " accepted");
 				ramificationPoints.Add(point);
 			}
 		}
@@ -289,7 +351,8 @@ public class MapGenerator : MonoBehaviour {
 		foreach (Point p in map.Keys) {
 			Chunk c = map[p];
 			c.gameObject.transform.position = new Vector3((float)(p.Y * chunkSize), 0.0f, (float)(p.X * chunkSize));
-			c.enabled = true;
+			//c.enabled = true;
+			c.gameObject.SetActive(true);
 		}
 	}
 }

@@ -1,4 +1,6 @@
+using UnityEngine;
 using System;
+
 public class Point {
 	public int X { get; private set; }
 	public int Y { get; private set; }
@@ -40,5 +42,30 @@ public class Point {
 			}
 		}
 		throw new NotSupportedException();
+	}
+
+	public override string ToString ()	{
+		return string.Format ("[Point: X={0}, Y={1}]", X, Y);
+	}
+
+	public override bool Equals (object obj) {
+		if (obj == null || !obj.GetType().Equals(this.GetType())) {
+			return false;
+		}
+
+		var other = obj as Point;
+
+		if (other.X == this.X && other.Y == this.Y) {
+			return true;
+		}
+
+		return false;
+	}
+
+	public override int GetHashCode () {        
+		int hash = 0;
+		hash = (hash * 33) ^ this.X.GetHashCode();
+		hash = (hash * 33) ^ this.Y.GetHashCode();
+		return hash;
 	}
 }
