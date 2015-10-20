@@ -9,6 +9,7 @@ public class MapCreationWindow : EditorWindow
 	int minSteps = 1;
 	int maxSteps = 10;
 	MapGenerator mapGenerator;
+	TrapsGeneration trapsGenerator;
 
 	// Add menu item named "My Window" to the Window menu
 	[MenuItem("Window/MapCreation")]
@@ -23,6 +24,8 @@ public class MapCreationWindow : EditorWindow
 		GUILayout.Label ("Map Generator Variables", EditorStyles.boldLabel);
 
 		mapGenerator = EditorGUILayout.ObjectField("Map Script Algorithm: ", mapGenerator, typeof(MapGenerator), true) as MapGenerator;
+		GameObject trapsobject = GameObject.FindGameObjectWithTag ("trapsGenerator");
+		trapsGenerator = trapsobject.GetComponent<TrapsGeneration> ();
 		seed = EditorGUILayout.IntField ("Seed: ", seed);
 		maxSize = EditorGUILayout.IntField("Maximum Map Size: ", maxSize);
 		minSteps = EditorGUILayout.IntField("Minimum Steps to Exit: ", minSteps);
@@ -30,6 +33,7 @@ public class MapCreationWindow : EditorWindow
 
 		if (GUILayout.Button ("Create new map!")) {
 			Dictionary<Point, Chunk> map = mapGenerator.NewMap(maxSize, minSteps, maxSteps, seed);
+			trapsGenerator.generateTraps(map);
 		}
 	}
 }
