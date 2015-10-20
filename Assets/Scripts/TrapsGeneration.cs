@@ -11,11 +11,11 @@ public class TrapsGeneration : MonoBehaviour {
 	private bool flag=true;
 	public List<GameObject> chunks;
 
-	void setMap(Dictionary<Point, Chunk> map){
+	public void setMap(Dictionary<Point, Chunk> map){
 		this.map = map;
 	}
 
-	void generateTraps(){
+	public void generateTraps(){
 		foreach (KeyValuePair<Point, Chunk> kvp in map) {
 			Chunk value = kvp.Value;
 			if(Random.value < probability_room){
