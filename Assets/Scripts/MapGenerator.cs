@@ -353,6 +353,12 @@ public class MapGenerator : MonoBehaviour {
 			c.gameObject.transform.position = new Vector3((float)(p.Y * chunkSize), 0.0f, (float)(p.X * chunkSize));
 			//c.enabled = true;
 			c.gameObject.SetActive(true);
+			if (p.Equals(startPoint)) {
+				c.isStartChunk = true;
+			}
+			if (p.Equals(endPoint)) {
+				c.isEndChunk = true;
+			}
 		}
 	}
 }
