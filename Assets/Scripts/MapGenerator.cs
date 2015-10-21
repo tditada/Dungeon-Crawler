@@ -56,9 +56,6 @@ public class MapGenerator : MonoBehaviour {
 
 		if (endPoint == null) { return null; }
 
-		map.Add(startPoint, Instantiate(chamberPrefab) as Chunk);
-		map.Add(endPoint, Instantiate(chamberPrefab) as Chunk);
-
 		GenerateTrivialPath(startPoint, endPoint);
 
 		Ramify(ramificationProbability, chamberProbability, maxSize);
@@ -96,6 +93,8 @@ public class MapGenerator : MonoBehaviour {
 		Debug.Log ("Topmost: " + topmostPoint);
 		Debug.Log ("Bottomost: " + bottomostPoint);
 
+		map.Add(startPoint, InstantiateChunk(chamberPrefab, chamberPrefab, chamberProbability, startPoint));
+		map.Add(endPoint, InstantiateChunk(chamberPrefab, chamberPrefab, chamberProbability, endPoint));
 		map[leftmostPoint].Rotate(Orientation.EAST);
 		if (rightmostPoint.Equals(topmostPoint)) {
 			map[rightmostPoint].Rotate(Orientation.SOUTH);
@@ -176,49 +175,31 @@ public class MapGenerator : MonoBehaviour {
 			if (chunk == null) {
 				chunk = PutTwoWayChunk(currentPoint, parentPoint, ramificationPoints[0], chamberProbability);
 			} else {
-				Point previoustPoint = null, nextPoint = null;
-				switch (chunk.chunkOrientation) {
-				case Orientation.NORTH:
-					previoustPoint = new Point(currentPoint.X, currentPoint.Y + 1);
-					nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
-					break;
-				case Orientation.EAST:
-					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
-					nextPoint = new Point(currentPoint.X + 1 , currentPoint.Y);
-					break;
-				case Orientation.SOUTH:
-					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
-					nextPoint = new Point(currentPoint.X, currentPoint.Y + 1);
-					break;
-				case Orientation.WEST:
-					previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
-					nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
-					break;
-				}
-				DestroyImmediate(chunk);
-				chunk = PutThreeWayChunk(currentPoint, previoustPoint, ramificationPoints[0], nextPoint, chamberProbability);
+				chunk = PutThreeWayChunkOnTrivialPath(chunk, currentPoint, ramificationPoints);
 			}
 			break;
 		case 2:
 			if (chunk == null) {
 				chunk = PutThreeWayChunk(currentPoint, parentPoint, ramificationPoints[0], ramificationPoints[1], chamberProbability);
+			} else if (currentPoint.Equals(startPoint) || currentPoint.Equals(endPoint)) {
+				chunk = PutThreeWayChunkOnTrivialPath(chunk, currentPoint, ramificationPoints);
 			} else {
-				DestroyImmediate(chunk);
-				chunk = PutFourWayChunk(chamberProbability);
+				RemoveChunk(currentPoint, chunk);
+				chunk = PutFourWayChunk(chamberProbability, currentPoint);
 			}
 			break;
 		case 3:
 			if (chunk != null) {
-				DestroyImmediate(chunk);
+				RemoveChunk(currentPoint, chunk);
 			}
-			chunk = PutFourWayChunk(chamberProbability);
+			chunk = PutFourWayChunk(chamberProbability, currentPoint);
 			break;
 		}
 		map[currentPoint] = chunk;
 	}
 
 	Chunk PutChamber (Point currentPoint, Point parentPoint) {
-		var chunk = Instantiate(chamberPrefab) as Chunk;
+		var chunk = InstantiateChunk(chamberPrefab, chamberPrefab, chamberProbability, currentPoint);
 		chunk.Rotate(parentPoint.RelativeOrientationTo(currentPoint));
 		Debug.Log ("Putting Chamber at " + currentPoint + " with orientation towards " + chunk.chunkOrientation);
 		return chunk;
@@ -236,7 +217,7 @@ public class MapGenerator : MonoBehaviour {
 	}
 
 	Chunk PutSraightTwoWayChunk (Point currentPoint, Point parentPoint, Point otherPoint, double chamberProbability) {
-		Chunk chunk = InstantiateChunk(twoWayCorridorPrefab, twoWayChamberPrefab, chamberProbability); 
+		Chunk chunk = InstantiateChunk(twoWayCorridorPrefab, twoWayChamberPrefab, chamberProbability, currentPoint); 
 		if (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.SOUTH ||
 		    parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH) {
 			chunk.Rotate(Orientation.NORTH);						
@@ -248,7 +229,7 @@ public class MapGenerator : MonoBehaviour {
 	}
 
 	Chunk PutCornerTwoWayChunk (Point currentPoint, Point parentPoint, Point otherPoint, double chamberProbability) {
-		Chunk chunk = InstantiateChunk(cornerPrefab, cornerChamberPrefab, chamberProbability);
+		Chunk chunk = InstantiateChunk(cornerPrefab, cornerChamberPrefab, chamberProbability, currentPoint);
 		if ((parentPoint.RelativeOrientationTo(currentPoint) == Orientation.NORTH &&
 		     otherPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST) ||
 		    (parentPoint.RelativeOrientationTo(currentPoint) == Orientation.EAST &&
@@ -274,8 +255,33 @@ public class MapGenerator : MonoBehaviour {
 		return chunk;
 	}
 
+	Chunk PutThreeWayChunkOnTrivialPath(Chunk chunk, Point currentPoint, List<Point> ramificationPoints) {
+		Point previoustPoint = null, nextPoint = null;
+		switch (chunk.chunkOrientation) {
+		case Orientation.NORTH:
+			previoustPoint = new Point(currentPoint.X, currentPoint.Y + 1);
+			nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
+			break;
+		case Orientation.EAST:
+			previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+			nextPoint = new Point(currentPoint.X + 1 , currentPoint.Y);
+			break;
+		case Orientation.SOUTH:
+			previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+			nextPoint = new Point(currentPoint.X, currentPoint.Y + 1);
+			break;
+		case Orientation.WEST:
+			previoustPoint = new Point(currentPoint.X - 1, currentPoint.Y);
+			nextPoint = new Point(currentPoint.X, currentPoint.Y - 1);
+			break;
+		}
+		RemoveChunk(currentPoint, chunk);
+		return PutThreeWayChunk(currentPoint, previoustPoint, ramificationPoints[0], nextPoint, chamberProbability);
+
+	}
+	
 	Chunk PutThreeWayChunk (Point currentPoint, Point parentPoint, Point otherPoint1, Point otherPoint2, double chamberProbability) {
-		Chunk chunk = InstantiateChunk(threeWayCorridorPrefab, threeWayChamberPrefab, chamberProbability);
+		Chunk chunk = InstantiateChunk(threeWayCorridorPrefab, threeWayChamberPrefab, chamberProbability, currentPoint);
 		var orientationSum = (int)parentPoint.RelativeOrientationTo(currentPoint) +
 			(int)otherPoint1.RelativeOrientationTo(currentPoint) + (int)otherPoint2.RelativeOrientationTo(currentPoint);
 		if (orientationSum % 2 == 0) {
@@ -299,17 +305,26 @@ public class MapGenerator : MonoBehaviour {
 		return chunk;
 	}
 
-	Chunk PutFourWayChunk(double chamberProbability) {
+	Chunk PutFourWayChunk(double chamberProbability, Point currentPoint) {
 		Debug.Log ("Putting FourWayChunk");
-		return InstantiateChunk(fourWayCorridorPrefab, fourWayChamberPrefab, chamberProbability);
+		return InstantiateChunk(fourWayCorridorPrefab, fourWayChamberPrefab, chamberProbability, currentPoint);
 	}
 
-	Chunk InstantiateChunk(Chunk corridorChunk, Chunk chamberChunk, double chamberProbability) {
+	Chunk InstantiateChunk(Chunk corridorChunk, Chunk chamberChunk, double chamberProbability, Point currentPoint) {
+		Debug.Log ("-------Instantiating Chunk!------");
+		Chunk c = null;
 		if (random.NextDouble() < chamberProbability) {
-			return Instantiate(chamberChunk) as Chunk;
+			c = Instantiate(chamberChunk) as Chunk;
 		} else {
-			return Instantiate(corridorChunk) as Chunk;
+			c = Instantiate(corridorChunk) as Chunk;
 		}
+		c.name = currentPoint.ToString();
+		return c;
+	}
+
+	void RemoveChunk (Point currentPoint, Chunk chunk) {
+		map.Remove(currentPoint);
+		DestroyImmediate(chunk.gameObject);
 	}
 
 	Point GetNextPositionOnTrivialPath (Point parentPoint, Point currentPoint) {
