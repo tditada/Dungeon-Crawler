@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 public class Mecanim_Control_melee : MonoBehaviour {
 	public Animator animator;
+	public bool animate = true;
 //	public bool leftMouseClick=false;
 //	public bool rightMouseClick=false;
 	public bool canControl=true;
@@ -48,9 +49,11 @@ public class Mecanim_Control_melee : MonoBehaviour {
 //		}
 		
 		if(animator){	
-			
-			shift_axis_late = Mathf.Clamp((shift_axis_late - 0.005f), 0.0f, 1.1f);
-			animLayer2 = Mathf.Clamp((animLayer2 - 0.01f), 0.0f, 1.0f);
+
+			if(animate){
+				shift_axis_late = Mathf.Clamp((shift_axis_late - 0.005f), 0.0f, 1.1f);
+				animLayer2 = Mathf.Clamp((animLayer2 - 0.01f), 0.0f, 1.0f);
+			}
 			
 //			animator.SetBool("LeftMouseClick", leftMouseClick);
 			
@@ -98,6 +101,10 @@ public class Mecanim_Control_melee : MonoBehaviour {
 			transform.LookAt(lookPos);
 		}
 
+		}else{
+			inputX = 0;
+			inputY = 0;
+			inputJump = 0;
 		}
 		
 	}
