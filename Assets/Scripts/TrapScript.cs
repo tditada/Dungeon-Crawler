@@ -4,12 +4,14 @@ using System.Collections;
 public class TrapScript : MonoBehaviour {
 
 	void OnTriggerEnter(Collider other) {
+		AudioSource audioSource = this.gameObject.GetComponent<AudioSource> ();
+		audioSource.Play ();
 		Explode ();
 	}
-
-	void onCollisionEnter(){
-		Explode ();
-	}
+//
+//	void onTriggerEnter(){
+//		Explode ();
+//	}
 	
 	void Explode() {
 		var exp = GetComponent<ParticleSystem>();
