@@ -34,4 +34,8 @@ public class GameController : MonoBehaviour {
 //			uiController.PauseMenu(false);
 		}
 	}
+
+	public void onClickMainMenu(){
+		Application.LoadLevel (0);
+	}
 }

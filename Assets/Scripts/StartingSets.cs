@@ -24,6 +24,7 @@ public class StartingSets : MonoBehaviour {
 	}
 
 	private void setTreasure(){
+		Debug.Log ("set treasure");
 		Instantiate (treasure,endPoint.gameObject.transform.position, endPoint.gameObject.transform.rotation);
 	}
 

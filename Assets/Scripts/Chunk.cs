@@ -51,7 +51,6 @@ public class Chunk : MonoBehaviour {
 	}
 
 	public List<Vector3> returnPossibleTraps(){
-		Debug.Log (deathTraps.Capacity);
 		return deathTraps;
 	}
 }

@@ -14,11 +14,11 @@ public class TrapsGeneration : MonoBehaviour {
 		foreach (KeyValuePair<Point, Chunk> kvp in map) {
 			Chunk value = kvp.Value;
 			List<Vector3> possibleTraps = value.returnPossibleTraps();
+			Debug.Log (possibleTraps.Count);
 			int i = Random.Range (0,possibleTraps.Count);
-			while(i>=0){
+			while(i>0){
 				if(Random.value < probability_room){
-					Debug.Log (value);
-					Vector3 trapPosition = possibleTraps[Random.Range(0,possibleTraps.Count)]; //- new Vector3(kvp.Key.X, 0); 
+					Vector3 trapPosition = possibleTraps[Random.Range(0,possibleTraps.Count)]; 
 					Debug.Log (trapPosition);
 					GameObject p = traps[Random.Range(0,traps.Count)];
 					GameObject go = Instantiate(p,Vector3.zero,p.transform.rotation) as GameObject;
