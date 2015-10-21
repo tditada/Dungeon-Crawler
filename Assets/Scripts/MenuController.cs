@@ -9,10 +9,30 @@ public class MenuController : MonoBehaviour {
 	public Button instructions;
 	public Text instructionText;
 	public Button back;
+	public Button hard;
+	public Button medium;
+	public Button easy;
 
-	public void onClickStart(){
-		Debug.Log ("clic");
+	public void onClickMedium(){		
 		Application.LoadLevel (2);
+	}
+
+	public void onClickHard(){		
+		Application.LoadLevel (3);
+	}
+
+	public void onClickEasy(){
+		Application.LoadLevel (1);
+	}
+
+	public void onClickPlay(){
+		play.gameObject.SetActive (false);
+		quit.gameObject.SetActive (false);
+		instructions.gameObject.SetActive (false);
+		back.gameObject.SetActive (true);
+		easy.gameObject.SetActive (true);
+		medium.gameObject.SetActive (true);
+		hard.gameObject.SetActive (true);
 	}
 
 	public void onClickInstructions(){
@@ -28,11 +48,13 @@ public class MenuController : MonoBehaviour {
 	}
 
 	public void onClickBack(){
-		Debug.Log ("clic");
 		play.gameObject.SetActive (true);
 		quit.gameObject.SetActive (true);
 		instructions.gameObject.SetActive (true);
 		instructionText.gameObject.SetActive (false);
 		back.gameObject.SetActive (false);
+		easy.gameObject.SetActive (false);
+		medium.gameObject.SetActive (false);
+		hard.gameObject.SetActive (false);
 	}
 }
