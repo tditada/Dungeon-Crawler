@@ -25,10 +25,8 @@ public class MapCreationWindow : EditorWindow
 		GUILayout.Label ("Map Generator Variables", EditorStyles.boldLabel);
 
 		mapGenerator = EditorGUILayout.ObjectField("Map Script Algorithm: ", mapGenerator, typeof(MapGenerator), true) as MapGenerator;
-		GameObject trapsobject = GameObject.FindGameObjectWithTag ("trapsGenerator");
-		trapsGenerator = trapsobject.GetComponent<TrapsGeneration> ();
-		GameObject startingSetsGO= GameObject.FindGameObjectWithTag ("startingSets");
-		startingSets = startingSetsGO.GetComponent<StartingSets> ();
+		trapsGenerator = EditorGUILayout.ObjectField("Traps Script Algorithm: ", trapsGenerator, typeof(TrapsGeneration), true) as TrapsGeneration;
+		startingSets = EditorGUILayout.ObjectField("Starting Sets: ", startingSets, typeof(StartingSets), true) as StartingSets;
 		seed = EditorGUILayout.IntField ("Seed: ", seed);
 		maxSize = EditorGUILayout.IntField("Maximum Map Size: ", maxSize);
 		minSteps = EditorGUILayout.IntField("Minimum Steps to Exit: ", minSteps);

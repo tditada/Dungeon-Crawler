@@ -21,9 +21,9 @@ public class TrapsGeneration : MonoBehaviour {
 					Vector3 trapPosition = possibleTraps[Random.Range(0,possibleTraps.Count)]; //- new Vector3(kvp.Key.X, 0); 
 					Debug.Log (trapPosition);
 					GameObject p = traps[Random.Range(0,traps.Count)];
-					Object o = Instantiate(p,Vector3.zero,p.transform.rotation);
-					((GameObject)o).gameObject.transform.parent=value.gameObject.transform;
-					((GameObject)o).gameObject.transform.localPosition=trapPosition;
+					GameObject go = Instantiate(p,Vector3.zero,p.transform.rotation) as GameObject;
+					go.gameObject.transform.parent=value.gameObject.transform;
+					go.gameObject.transform.localPosition=trapPosition;
 				}
 				i--;
 			}
